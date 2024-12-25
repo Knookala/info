@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Advanced Time and Weather</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background-color: #f0f0f0;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 {
+      color: #333;
+    }
+    #current-date, #current-time, #current-weather, #forecast-morning, #forecast-tomorrow {
+      margin: 20px 0;
+      font-size: 1.5rem;
+    }
+    .weather-icon {
+      width: 50px;
+      height: 50px;
+      vertical-align: middle;
+    }
+  </style>
+</head>
+<body>
+  <h1>Time and Weather in Helsinki</h1>
+  <div id="current-date">Loading date...</div>
+  <div id="current-time">Loading time...</div>
+  <div id="current-weather">Loading current weather...</div>
+  <div id="forecast-morning">Loading tomorrow morning's weather...</div>
+  <div id="forecast-tomorrow">Loading tomorrow's overall weather...</div>
+  <script>
+    const apiKey = 'a37b034c6dd5c3ecddaa622f666ba638'; // Your OpenWeatherMap API key
+    const lat = 60.1580; // Latitude for Jätkäsaari, Helsinki
+    const lon = 24.9204; // Longitude for Jätkäsaari, Helsinki
+
+    // Function to update time
+    function updateTime() {
+      const now = new Date();
+      const day = now.getDate().toString().padStart(2, '0');
+      const month = (now.getMonth() + 1).toString().padStart(2, '0');
+      const year = now.getFullYear().toString().slice(-2);
+      const hours = now.getHours().toString().padStart(2, '0');
+      const minutes = now.getMinutes().toString().padStart(2, '0');
+      document.getElementById('current-date').innerText = `${day}/${month}/${year}`;
+      document.getElementById('current-time').innerText = `${hours}:${minutes}`;
+    }
+
+    // Function to fetch weather
+    function fetchWeather() {
+  const url = `https://api.openweathermap.org/data/2.5/onecall?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric`;
+  fetch(url)
+    .then(response => {
+      if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+      return response.json();
+    })
+    .then(data => {
+      // Current weather
+      const currentTemp = data.current.temp;
+      const currentWeather = data.current.weather[0].description;
+      const currentIcon = data.current.weather[0].icon;
+      document.getElementById('current-weather').innerHTML = `
+        Current weather: ${currentTemp}°C, ${currentWeather}
+        <img class="weather-icon" src="https://openweathermap.org/img/wn/${currentIcon}.png" alt="${currentWeather}">
+      `;
+
+      // Tomorrow morning's weather (around 8 AM)
+      const morningData = data.hourly.find(hour => {
+        const date = new Date(hour.dt * 1000);
+        return date.getHours() === 8 && date.getDate() === new Date().getDate() + 1;
+      });
+      if (morningData) {
+        const morningTemp = morningData.temp;
+        const morningWeather = morningData.weather[0].description;
+        const morningIcon = morningData.weather[0].icon;
+        document.getElementById('forecast-morning').innerHTML = `
+          Tomorrow morning (8 AM): ${morningTemp}°C, ${morningWeather}
+          <img class="weather-icon" src="https://openweathermap.org/img/wn/${morningIcon}.png" alt="${morningWeather}">
+        `;
+      } else {
+        document.getElementById('forecast-morning').innerText = 'Unable to fetch tomorrow morning’s weather.';
+      }
+
+      // Tomorrow's overall forecast (daily summary)
+      const tomorrowData = data.daily[1];
+      if (tomorrowData) {
+        const tomorrowTemp = tomorrowData.temp.day;
+        const tomorrowWeather = tomorrowData.weather[0].description;
+        const tomorrowIcon = tomorrowData.weather[0].icon;
+        document.getElementById('forecast-tomorrow').innerHTML = `
+          Tomorrow's weather: ${tomorrowTemp}°C, ${tomorrowWeather}
+          <img class="weather-icon" src="https://openweathermap.org/img/wn/${tomorrowIcon}.png" alt="${tomorrowWeather}">
+        `;
+      } else {
+        document.getElementById('forecast-tomorrow').innerText = 'Unable to fetch tomorrow’s overall weather.';
+      }
+    })
+    .catch(error => {
+      console.error('Error fetching weather data:', error);
+      document.getElementById('current-weather').innerText = 'Unable to fetch current weather.';
+      document.getElementById('forecast-morning').innerText = 'Unable to fetch tomorrow morning’s weather.';
+      document.getElementById('forecast-tomorrow').innerText = 'Unable to fetch tomorrow’s overall weather.';
+    });
+}
+
+
+    // Initialize
+    updateTime();
+    setInterval(updateTime, 60000); // Update time every minute
+    fetchWeather();
+    setInterval(fetchWeather, 600000); // Update weather every 10 minutes
+  </script>
+</body>
+</html>
